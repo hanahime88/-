@@ -1,8 +1,8 @@
 # GPT_RP.py — Minimal single‑character role‑play engine wrapped with FastAPI
 # ----------------------------------------------------------------------
 # 部署步驟（Render / Railway）
-#   1. 將本檔與 character.yaml 放在同一 repo
-#   2. 環境變數 CHAR_YAML_PATH 指向角色檔（預設 character.yaml）
+#   1. 將本檔與 damian_knight_dusk.yaml 放在同一 repo
+#   2. 環境變數 CHAR_YAML_PATH 指向角色檔（預設 damian_knight_dusk.yaml）
 #   3. Start command:  python -m uvicorn GPT_RP:app --host 0.0.0.0 --port $PORT
 # ----------------------------------------------------------------------
 """
