@@ -78,7 +78,7 @@ class SoloEngine:
 # ----------------------------------------------------------------------
 
 router = APIRouter()
-CHAR_YAML_PATH = os.getenv("CHAR_YAML_PATH", "character.yaml")
+CHAR_YAML_PATH = os.getenv("CHAR_YAML_PATH", "damian_knight_dusk.yaml")
 _engine: SoloEngine | None = None
 
 def _load_engine() -> SoloEngine:
