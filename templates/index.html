@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 角色扮演聊天</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            position: absolute;
+            height: 100%;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-header h2 {
+            color: #333;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-section h3 {
+            color: #555;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        /* Chat Sessions */
+        .chat-sessions {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .session-item:hover,
+        .session-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .session-name {
+            flex: 1;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .session-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .session-actions button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .session-actions button:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        /* Memory Section */
+        .memory-input {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .memory-input input,
+        .memory-input textarea {
+            padding: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .memory-input textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        /* Settings */
+        .settings-group {
+            margin: 10px 0;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .settings-group select,
+        .settings-group input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        /* Main Chat Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-title {
+            color: white;
+            font-size: 1.2rem;
+            flex: 1;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .message-content {
+            max-width: 70%;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .message.user .message-content {
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+        }
+
+        .message-text {
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            display: none;
+            padding: 4px;
+        }
+
+        .message:hover .message-actions {
+            display: block;
+        }
+
+        .message-actions button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .message-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .message.edited .message-content::after {
+            content: "已編輯";
+            position: absolute;
+            bottom: -15px;
+            right: 0;
+            font-size: 0.7rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Chat Input */
+        .chat-input {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 16px;
+            border-radius: 25px;
+            font-size: 1rem;
+            resize: none;
+            max-height: 120px;
+            min-height: 50px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Upload buttons */
+        .upload-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .upload-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .input-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .upload-buttons {
+                order: -1;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-robot"></i> AI 角色聊天</h2>
+                <button class="btn btn-small" onclick="openNewSessionModal()">
+                    <i class="fas fa-plus"></i> 新聊天
+                </button>
+            </div>
+
+            <!-- Chat Sessions -->
+            <div class="sidebar-section">
+                <h3><i class="fas fa-comments"></i> 聊天記錄</h3>
+                <div class="chat-sessions" id="chatSessions">
+                    <!-- Sessions will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Memories -->
+            <div class="sidebar-section">
+                <h3><i class="fas fa-brain"></i> 過去回憶</h3>
+                <div class="memory-input">
+                    <input type="text" id="memoryTitle" placeholder="標題...">
+                    <textarea id="memoryContent" placeholder="輸入回憶內容..."></textarea>
+                    <button class="btn btn-small" onclick="addMemory()">
+                        <i class="fas fa-plus"></i> 添加回憶
+                    </button>
+                    <div class="file-upload">
+                        <i class="fas fa-upload"></i> 上傳文件
+                        <input type="file" id="memoryFileUpload" accept=".txt,.docx" onchange="uploadMemoryFile()">
+                    </div>
+                    <button class="btn btn-small" onclick="viewMemories()">
+                        <i class="fas fa-eye"></i> 查看所有回憶
+                    </button>
+                </div>
+            </div>
+
+            <!-- Avatars -->
+            <div class="sidebar-section">
+                <h3><i class="fas fa-image"></i> 頭像設定</h3>
+                <div class="file-upload">
+                    <i class="fas fa-user"></i> 使用者頭像
+                    <input type="file" id="userAvatarUpload" accept="image/*" onchange="uploadUserAvatar()">
+                </div>
+                <div class="file-upload" style="margin-top: 8px;">
+                    <i class="fas fa-robot"></i> 角色頭像
+                    <input type="file" id="characterAvatarUpload" accept="image/*" onchange="uploadCharacterAvatar()">
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="sidebar-section">
+                <h3><i class="fas fa-cog"></i> 設定</h3>
+                <div class="settings-group">
+                    <label>介面語言</label>
+                    <select id="languageSelect">
+                        <option value="zh-TW">繁體中文</option>
+                        <option value="en-US">English</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label>AI 模型</label>
+                    <select id="modelSelect">
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label>回覆字數</label>
+                    <input type="number" id="responseLengthInput" min="50" max="1000" value="200">
+                </div>
+                <button class="btn btn-small" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> 儲存設定
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="chat-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="chat-title" id="chatTitle">選擇或建立聊天室</div>
+                <div class="header-actions">
+                    <button class="btn btn-small" onclick="exportCurrentSession()" id="exportBtn" disabled>
+                        <i class="fas fa-download"></i> 匯出
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <div style="text-align: center; color: rgba(255,255,255,0.7); margin-top: 50px;">
+                    <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                    <p>選擇聊天室開始對話，或建立新的聊天室</p>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input">
+                <div class="upload-buttons">
+                    <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">
+                        <i class="fas fa-image"></i> 圖片
+                    </button>
+                    <button class="upload-btn" onclick="document.getElementById('videoUpload').click()">
+                        <i class="fas fa-video"></i> 影片
+                    </button>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="uploadImage()">
+                    <input type="file" id="videoUpload" accept="video/*" style="display: none;" onchange="uploadVideo()">
+                </div>
+                <div class="input-container">
+                    <textarea class="input-field" id="messageInput" placeholder="輸入訊息..." 
+                              onkeydown="handleKeyDown(event)" disabled></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- New Session Modal -->
+    <div class="modal" id="newSessionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>建立新聊天室</h3>
+                <button class="close-btn" onclick="closeModal('newSessionModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>聊天室名稱</label>
+                <input type="text" id="newSessionName" placeholder="輸入聊天室名稱...">
+            </div>
+            <div class="form-group">
+                <label>選擇角色</label>
+                <select id="characterSelect">
+                    <option value="damian_knight_dusk">Damian Knight</option>
+                </select>
+            </div>
+            <button class="btn" onclick="createNewSession()">
+                <i class="fas fa-plus"></i> 建立聊天室
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Session Name Modal -->
+    <div class="modal" id="editSessionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯聊天室名稱</h3>
+                <button class="close-btn" onclick="closeModal('editSessionModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>聊天室名稱</label>
+                <input type="text" id="editSessionName" placeholder="輸入新名稱...">
+            </div>
+            <button class="btn" onclick="saveSessionName()">
+                <i class="fas fa-save"></i> 儲存
+            </button>
+        </div>
+    </div>
+
+    <!-- Memories Modal -->
+    <div class="modal" id="memoriesModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>所有回憶</h3>
+                <button class="close-btn" onclick="closeModal('memoriesModal')">&times;</button>
+            </div>
+            <div id="memoriesList">
+                <!-- Memories will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Message Modal -->
+    <div class="modal" id="editMessageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯訊息</h3>
+                <button class="close-btn" onclick="closeModal('editMessageModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>訊息內容</label>
+                <textarea id="editMessageContent" rows="5"></textarea>
+            </div>
+            <button class="btn" onclick="saveEditedMessage()">
+                <i class="fas fa-save"></i> 儲存變更
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSessionId = null;
+        let editingMessageId = null;
+        let editingSessionId = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSessions();
+            loadSettings();
+        });
+
+        // Sidebar functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Session management
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/sessions');
+                const sessions = await response.json();
+                const container = document.getElementById('chatSessions');
+                
+                container.innerHTML = '';
+                sessions.forEach(session => {
+                    const sessionEl = document.createElement('div');
+                    sessionEl.className = 'session-item';
+                    sessionEl.innerHTML = `
+                        <div class="session-name">${session.name}</div>
+                        <div class="session-actions">
+                            <button onclick="editSession('${session.id}', '${session.name}')" title="編輯">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteSession('${session.id}')" title="刪除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    sessionEl.onclick = (e) => {
+                        if (!e.target.closest('.session-actions')) {
+                            loadSession(session.id, session.name);
+                        }
+                    };
+                    container.appendChild(sessionEl);
+                });
+            } catch (error) {
+                console.error('Failed to load sessions:', error);
+            }
+        }
+
+        async function loadSession(sessionId, sessionName) {
+            currentSessionId = sessionId;
+            
+            // Update UI
+            document.getElementById('chatTitle').textContent = sessionName;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('exportBtn').disabled = false;
+            
+            // Update active session
+            document.querySelectorAll('.session-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Load messages
+            await loadMessages(sessionId);
+            
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        async function loadMessages(sessionId) {
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}/messages`);
+                const messages = await response.json();
+                const container = document.getElementById('chatMessages');
+                
+                container.innerHTML = '';
+                messages.forEach(message => {
+                    addMessageToUI(message);
+                });
+                
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+
+        function addMessageToUI(message) {
+            const container = document.getElementById('chatMessages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${message.role}`;
+            messageEl.dataset.messageId = message.id;
+            
+            const avatar = message.role === 'user' ? 'U' : 'AI';
+            
+            messageEl.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content ${message.edited ? 'edited' : ''}">
+                    <div class="message-text">${message.content}</div>
+                    <div class="message-actions">
+                        <button onclick="editMessage('${message.id}', '${message.content.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-edit"></i> 編輯
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(messageEl);
+        }
+
+        function openNewSessionModal() {
+            document.getElementById('newSessionModal').classList.add('show');
+        }
+
+        async function createNewSession() {
+            const name = document.getElementById('newSessionName').value.trim();
+            const characterId = document.getElementById('characterSelect').value;
+            
+            if (!name) {
+                alert('請輸入聊天室名稱');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, character_id: characterId })
+                });
+                
+                const result = await response.json();
+                
+                closeModal('newSessionModal');
+                document.getElementById('newSessionName').value = '';
+                
+                await loadSessions();
+                loadSession(result.session_id, name);
+            } catch (error) {
+                console.error('Failed to create session:', error);
+                alert('建立聊天室失敗');
+            }
+        }
+
+        function editSession(sessionId, currentName) {
+            editingSessionId = sessionId;
+            document.getElementById('editSessionName').value = currentName;
+            document.getElementById('editSessionModal').classList.add('show');
+        }
+
+        async function saveSessionName() {
+            const newName = document.getElementById('editSessionName').value.trim();
+            
+            if (!newName) {
+                alert('請輸入聊天室名稱');
+                return;
+            }
+            
+            try {
+                await fetch(`/api/sessions/${editingSessionId}/name`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+                
+                closeModal('editSessionModal');
+                await loadSessions();
+                
+                if (currentSessionId === editingSessionId) {
+                    document.getElementById('chatTitle').textContent = newName;
+                }
+            } catch (error) {
+                console.error('Failed to update session name:', error);
+                alert('更新聊天室名稱失敗');
+            }
+        }
+
+        async function deleteSession(sessionId) {
+            if (!confirm('確定要刪除這個聊天室嗎？')) return;
+            
+            try {
+                await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+                
+                if (currentSessionId === sessionId) {
+                    currentSessionId = null;
+                    document.getElementById('chatTitle').textContent = '選擇或建立聊天室';
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div style="text-align: center; color: rgba(255,255,255,0.7); margin-top: 50px;">
+                            <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                            <p>選擇聊天室開始對話，或建立新的聊天室</p>
+                        </div>
+                    `;
+                    document.getElementById('messageInput').disabled = true;
+                    document.getElementById('sendBtn').disabled = true;
+                    document.getElementById('exportBtn').disabled = true;
+                }
+                
+                await loadSessions();
+            } catch (error) {
+                console.error('Failed to delete session:', error);
+                alert('刪除聊天室失敗');
+            }
+        }
+
+        // Message handling
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !currentSessionId) return;
+            
+            // Show loading
+            const sendBtn = document.getElementById('sendBtn');
+            const originalHTML = sendBtn.innerHTML;
+            sendBtn.innerHTML = '<div class="loading"></div>';
+            sendBtn.disabled = true;
+            input.disabled = true;
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: message,
+                        session_id: currentSessionId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                // Add user message
+                addMessageToUI({
+                    id: result.user_message_id,
+                    role: 'user',
+                    content: message,
+                    edited: false
+                });
+                
+                // Add AI response
+                addMessageToUI({
+                    id: result.ai_message_id,
+                    role: 'assistant',
+                    content: result.response,
+                    edited: false
+                });
+                
+                // Scroll to bottom
+                const container = document.getElementById('chatMessages');
+                container.scrollTop = container.scrollHeight;
+                
+                // Clear input
+                input.value = '';
+                
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                alert('發送訊息失敗');
+            } finally {
+                // Restore button
+                sendBtn.innerHTML = originalHTML;
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function editMessage(messageId, content) {
+            editingMessageId = messageId;
+            document.getElementById('editMessageContent').value = content;
+            document.getElementById('editMessageModal').classList.add('show');
+        }
+
+        async function saveEditedMessage() {
+            const newContent = document.getElementById('editMessageContent').value.trim();
+            
+            if (!newContent) {
+                alert('請輸入訊息內容');
+                return;
+            }
+            
+            try {
+                await fetch(`/api/messages/${editingMessageId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: newContent })
+                });
+                
+                closeModal('editMessageModal');
+                await loadMessages(currentSessionId);
+            } catch (error) {
+                console.error('Failed to edit message:', error);
+                alert('編輯訊息失敗');
+            }
+        }
+
+        // Memory management
+        async function addMemory() {
+            const title = document.getElementById('memoryTitle').value.trim();
+            const content = document.getElementById('memoryContent').value.trim();
+            
+            if (!title || !content) {
+                alert('請輸入標題和內容');
+                return;
+            }
+            
+            try {
+                await fetch('/api/memories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                
+                document.getElementById('memoryTitle').value = '';
+                document.getElementById('memoryContent').value = '';
+                alert('回憶已添加');
+            } catch (error) {
+                console.error('Failed to add memory:', error);
+                alert('添加回憶失敗');
+            }
+        }
+
+        async function uploadMemoryFile() {
+            const fileInput = document.getElementById('memoryFileUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/memories/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                alert(`文件 "${result.filename}" 已上傳為回憶`);
+                fileInput.value = '';
+            } catch (error) {
+                console.error('Failed to upload memory file:', error);
+                alert('上傳文件失敗');
+            }
+        }
+
+        async function viewMemories() {
+            try {
+                const response = await fetch('/api/memories');
+                const memories = await response.json();
+                
+                const container = document.getElementById('memoriesList');
+                container.innerHTML = '';
+                
+                memories.forEach(memory => {
+                    const memoryEl = document.createElement('div');
+                    memoryEl.style.cssText = 'margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px;';
+                    memoryEl.innerHTML = `
+                        <h4 style="margin-bottom: 8px; color: #333;">${memory.title}</h4>
+                        <p style="color: #666; line-height: 1.4;">${memory.content}</p>
+                        <small style="color: #999;">${new Date(memory.created_at).toLocaleString()}</small>
+                    `;
+                    container.appendChild(memoryEl);
+                });
+                
+                document.getElementById('memoriesModal').classList.add('show');
+            } catch (error) {
+                console.error('Failed to load memories:', error);
+                alert('載入回憶失敗');
+            }
+        }
+
+        // File uploads
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            // For now, just show the filename in the input
+            const messageInput = document.getElementById('messageInput');
+            messageInput.value += `[圖片: ${file.name}] `;
+            fileInput.value = '';
+        }
+
+        async function uploadVideo() {
+            const fileInput = document.getElementById('videoUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            // For now, just show the filename in the input
+            const messageInput = document.getElementById('messageInput');
+            messageInput.value += `[影片: ${file.name}] `;
+            fileInput.value = '';
+        }
+
+        async function uploadUserAvatar() {
+            const fileInput = document.getElementById('userAvatarUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            // Implementation for avatar upload would go here
+            alert('使用者頭像上傳功能開發中');
+            fileInput.value = '';
+        }
+
+        async function uploadCharacterAvatar() {
+            const fileInput = document.getElementById('characterAvatarUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            // Implementation for avatar upload would go here
+            alert('角色頭像上傳功能開發中');
+            fileInput.value = '';
+        }
+
+        // Settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                document.getElementById('languageSelect').value = settings.language || 'zh-TW';
+                document.getElementById('modelSelect').value = settings.model || 'gemini-2.0-flash-exp';
+                document.getElementById('responseLengthInput').value = settings.response_length || '200';
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                language: document.getElementById('languageSelect').value,
+                model: document.getElementById('modelSelect').value,
+                response_length: document.getElementById('responseLengthInput').value
+            };
+            
+            try {
+                await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                alert('設定已儲存');
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                alert('儲存設定失敗');
+            }
+        }
+
+        // Export functionality
+        async function exportCurrentSession() {
+            if (!currentSessionId) return;
+            
+            try {
+                const response = await fetch(`/api/export/${currentSessionId}`, { method: 'POST' });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `chat_export_${new Date().toISOString().slice(0, 10)}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('匯出失敗');
+                }
+            } catch (error) {
+                console.error('Failed to export session:', error);
+                alert('匯出失敗');
+            }
+        }
+
+        // Modal functions
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
+            }
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open') && 
+                !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        // Auto-resize textarea
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>
