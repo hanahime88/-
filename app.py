@@ -2,10 +2,17 @@ import os
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Dict, Any, List, Optional
 import asyncio
 from pathlib import Path
+
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)
 
 import yaml
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException, Depends
@@ -668,7 +675,7 @@ async def init_default_character():
         char_name = char_data.get("name", "Damian Knight")
         
         cursor.execute("INSERT INTO characters (id, name, data) VALUES (?, ?, ?)",
-                       (char_id, char_name, json.dumps(char_data)))
+                       (char_id, char_name, json.dumps(char_data, cls=DateTimeEncoder)))
         conn.commit()
     
     conn.close()
