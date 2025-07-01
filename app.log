@@ -1,0 +1,39 @@
+nohup: ignoring input
+/workspace/app.py:676: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Will watch for changes in these directories: ['/workspace']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [4716] using WatchFiles
+INFO:     Started server process [4730]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/workspace/venv/lib/python3.13/site-packages/starlette/routing.py", line 692, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/workspace/venv/lib/python3.13/site-packages/starlette/routing.py", line 569, in __aenter__
+    await self._router.startup()
+  File "/workspace/venv/lib/python3.13/site-packages/starlette/routing.py", line 669, in startup
+    await handler()
+  File "/workspace/app.py", line 679, in startup_event
+    await init_default_character()
+  File "/workspace/app.py", line 671, in init_default_character
+    (char_id, char_name, json.dumps(char_data)))
+                         ~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/__init__.py", line 231, in dumps
+    return _default_encoder.encode(obj)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/usr/lib/python3.13/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/usr/lib/python3.13/json/encoder.py", line 261, in iterencode
+    return _iterencode(o, 0)
+  File "/usr/lib/python3.13/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+                    f'is not JSON serializable')
+TypeError: Object of type date is not JSON serializable
+
+ERROR:    Application startup failed. Exiting.
